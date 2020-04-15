@@ -17,14 +17,15 @@ namespace UC_SharpGLSimulate
 {
     public partial class UC_SharpGLSimulate : UserControl
     {
+
         public UC_SharpGLSimulate()
         {
             InitializeComponent();
             this.timer.Enabled = false;
-            //string FilePath = @"C:\Users\whli\Desktop\2_刨花板_暖白_18.nc";
-            string FilePath = @"E:\路径模拟开发\Monroe.cnc";
+            string FilePath = @"C:\Users\whli\Desktop\2_刨花板_暖白_18.nc";
+            //string FilePath = @"E:\路径模拟开发\Monroe.cnc";
 
-            this.CreateDrawing(FilePath, true);
+            this.CreateDrawing(FilePath, false);
             //this.CreateDrawing("(0,0,0)", false);
 
         }
@@ -335,7 +336,6 @@ namespace UC_SharpGLSimulate
                 gl.Begin(OpenGL.GL_POINTS);
                 gl.Vertex(X, Y, Z);
                 gl.End();
-
             }
             gl.Flush();
             gl.Finish();
@@ -348,14 +348,12 @@ namespace UC_SharpGLSimulate
         {
             this.timer.Enabled = false;
             this.lblFinished.Visible = false;
-
             if (this._currentNumber >= this._nCTextArray.Length)
             {
                 this.lblFinished.Visible = true;
                 this.timer.Enabled = false;
                 return;
             }
-
             //往全局数据添加数据
             this.AddDrawingData();
             this._currentNumber += 1;
@@ -384,7 +382,6 @@ namespace UC_SharpGLSimulate
             {
                 this._isFullLine = false;
             }
-
             Point Point = new Point();
             //虚线
             if (this._isFullLine == false && (item.Contains("X") || item.Contains("Y") || item.Contains("Z")) && !item.Contains("G2") && !item.Contains("G02"))
@@ -447,7 +444,6 @@ namespace UC_SharpGLSimulate
                 double Circle_Y = 0;
                 double Circle_Z = 0;
 
-                
                 Point p1 = new Point(Point.L_X, Point.L_Y, Point.L_Z);//起点
                 Point p2 = new Point(Point.X, Point.Y, Point.Z);//终点
 
@@ -490,6 +486,7 @@ namespace UC_SharpGLSimulate
                     Point.CricleList.Add(new Circle(Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI), Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI)));
                     Point.CricleList.Add(new Circle(Radius * Math.Cos(End_Angel / 360.0 * 2 * Math.PI), Radius * Math.Sin(End_Angel / 360.0 * 2 * Math.PI)));//将圆弧终点加上
                 }
+
                 Point.Circle.X = Circle_X;
                 Point.Circle.Y = Circle_Y;
                 this._trackPointList.Add(Point);
