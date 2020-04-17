@@ -22,12 +22,12 @@ namespace UC_SharpGLSimulate
         {
             InitializeComponent();
             this.timer.Enabled = false;
+            this.GLC_Model.OpenGLDraw += new SharpGL.RenderEventHandler(this.GLC_Model_OpenGLDraw);
             string FilePath = @"C:\Users\whli\Desktop\2_刨花板_暖白_18.nc";
-            //string FilePath = @"E:\路径模拟开发\Monroe.cnc";
-
             this.CreateDrawing(FilePath, false);
+            //this.CreateDrawing(FilePath, true);
+            //string FilePath = @"E:\路径模拟开发\Monroe.cnc";
             //this.CreateDrawing("(0,0,0)", false);
-
         }
 
         #region 全局变量
@@ -141,8 +141,6 @@ namespace UC_SharpGLSimulate
             }
         }
 
-
-
         /// <summary>
         /// 圆弧对象
         /// </summary>
@@ -182,11 +180,11 @@ namespace UC_SharpGLSimulate
                 this.Y = yy;
                 this.Z = zz;
             }
-
         }
 
         #endregion
 
+        #region 调用事件
         /// <summary>
         /// 绘图事件
         /// </summary>
@@ -360,6 +358,72 @@ namespace UC_SharpGLSimulate
             this.timer.Enabled = true;
         }
 
+        #endregion
+
+        #region 调用方法
+
+        /// <summary>
+        /// 传一个路径或者一个坐标，坐标格式（0,0,0）
+        /// </summary>
+        /// <param name="Parameter">传入的参数，文件路径或者坐标</param>
+        /// <param name="Type">显示的类型，True代表模拟加工，False代表全部画出，仅Parameter为路径时有效</param>
+        /// <returns></returns>
+        public void CreateDrawing(string Parameter, bool Type)
+        {
+            try
+            {
+                this.Reload();
+                //判断是否为文件路径,并绘画轨迹图
+                if (File.Exists(Parameter))
+                {
+                    this._isFilePath = true;
+                    FileStream fs = new FileStream(Parameter, FileMode.Open, FileAccess.Read);
+                    StreamReader sw = new StreamReader(fs, false);
+                    string NCText = sw.ReadToEnd();
+                    //添加G代码集合
+                    this._nCTextArray = NCText.Split('\n');
+                    //模拟加工
+                    if (Type == true)
+                    {
+                        this.timer.Enabled = true;
+                    }
+                    //全部画出
+                    else
+                    {
+                        this.timer.Enabled = false;
+                        this.lblFinished.Text = "Loading...";
+                        for (this._currentNumber = 0; this._currentNumber <= this._nCTextArray.Length - 1; this._currentNumber++)
+                        {
+                            this.AddDrawingData();
+                        }
+                        this.lblFinished.Text = "Finished!";
+                    }
+                }
+                //判断是否为坐标，只绘画一个点的状态
+                else
+                {
+                    string var1 = Parameter.Substring(1, Parameter.Length - 2);
+                    bool result = true;
+                    foreach (var item in var1.Split(','))
+                    {
+                        result = this.IsNumber(item);
+                        if (result == false)
+                        {
+                            MessageBox.Show("传入格式错误，请检查!");
+                            return;
+                        }
+                    }
+                    //坐标形式
+                    this._customPoint = Parameter;
+                    this._isFilePath = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
         /// <summary>
         /// 往全局数组添加数据
         /// </summary>
@@ -452,11 +516,15 @@ namespace UC_SharpGLSimulate
                 {
                     for (double y1 = Point.Y - Point.Circle.R * 2; y1 <= Point.Y + Point.Circle.R * 2; y1 += 0.001)
                     {
-                        if (((Math.Pow((Point.L_X - x1), 2) + Math.Pow((Point.L_Y - y1), 2)) - Math.Pow(Point.Circle.R, 2)) < 0.00001 && (Math.Pow((Point.X - x1), 2) + Math.Pow((Point.Y - y1), 2) - Math.Pow(Point.Circle.R, 2)) < 0.00001)
+                        for (double z1 = Point.Z - Point.Circle.R * 2; z1 <= Point.Z + Point.Circle.R * 2; z1 += 0.001)
                         {
-                            Circle_X = x1;
-                            Circle_Y = y1;
-                            break;
+                            if (((Math.Pow((Point.L_X - x1), 2) + Math.Pow((Point.L_Y - y1), 2)+ Math.Pow((Point.L_Z - z1), 2)) - Math.Pow(Point.Circle.R, 2)) < 0.00001 && (Math.Pow((Point.X - x1), 2) + Math.Pow((Point.Y - y1), 2)+ Math.Pow((Point.Z - z1), 2) - Math.Pow(Point.Circle.R, 2)) < 0.00001)
+                            {
+                                Circle_X = x1;
+                                Circle_Y = y1;
+                                Circle_Z = z1;
+                                break;
+                            }
                         }
                     }
                 }
@@ -476,108 +544,25 @@ namespace UC_SharpGLSimulate
                 {
                     float Diff = End_Angel - Start_Angel;
                     for (int i = 0; i < N; i++)
-                    Point.CricleList.Add(new Circle(Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI), Radius * Math.Sin((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI)));
+                    { 
+                        Point.CricleList.Add(new Circle(Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI), Radius * Math.Sin((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI)));
+                    }
                     Point.CricleList.Add(new Circle(Radius * Math.Cos(End_Angel / 360.0 * 2 * Math.PI), Radius * Math.Sin(End_Angel / 360.0 * 2 * Math.PI)));//将圆弧终点加上
                 }
                 else
                 {
                     float Diff = End_Angel - Start_Angel + 360.0f;
                     for (int i = 0; i < N; i++)
-                    Point.CricleList.Add(new Circle(Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI), Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI)));
+                    { 
+                        Point.CricleList.Add(new Circle(Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI), Radius * Math.Cos((Start_Angel + Diff / N * i) / 360.0 * 2 * Math.PI)));
+                    }
                     Point.CricleList.Add(new Circle(Radius * Math.Cos(End_Angel / 360.0 * 2 * Math.PI), Radius * Math.Sin(End_Angel / 360.0 * 2 * Math.PI)));//将圆弧终点加上
                 }
-
                 Point.Circle.X = Circle_X;
                 Point.Circle.Y = Circle_Y;
+                Point.Circle.Z = Circle_Z;
                 this._trackPointList.Add(Point);
             }
-        }
-
-
-        /// <summary>
-        /// 计算两个坐标点的距离
-        /// </summary>
-        /// <param name="p1">坐标p1</param>
-        /// <param name="p2">坐标p2</param>
-        /// <returns></returns>
-        private double GetDistance(Point p1, Point p2)
-        {
-            return Math.Sqrt((p1.X-p2.X)* (p1.X - p2.X)+(p1.Y-p2.Y)* (p1.Y - p2.Y) + (p1.Z - p2.Z) * (p1.Z - p2.Z));
-        }
-
-
-        /// <summary>
-        /// 传一个路径或者一个坐标，坐标格式（0,0,0）
-        /// </summary>
-        /// <param name="Parameter">传入的参数，文件路径或者坐标</param>
-        /// <param name="Type">显示的类型，True代表模拟加工，False代表全部画出，仅Parameter为路径时有效</param>
-        /// <returns></returns>
-        public void CreateDrawing(string Parameter, bool Type)
-        {
-            try
-            {
-                //判断是否为文件路径,并绘画轨迹图
-                if (File.Exists(Parameter))
-                {
-                    this._isFilePath = true;
-                    FileStream fs = new FileStream(Parameter, FileMode.Open, FileAccess.Read);
-                    StreamReader sw = new StreamReader(fs, false);
-                    string NCText = sw.ReadToEnd();
-                    //添加G代码集合
-                    this._nCTextArray = NCText.Split('\n');
-                    //模拟加工
-                    if (Type == true)
-                    {
-                        this.GLC_Model.OpenGLDraw += new SharpGL.RenderEventHandler(this.GLC_Model_OpenGLDraw);
-                        this.timer.Enabled = true;
-                    }
-                    //全部画出
-                    else
-                    {
-                        this.timer.Enabled = false;
-                        this.lblFinished.Text = "Loading...";
-                        for (this._currentNumber = 0; this._currentNumber <= this._nCTextArray.Length - 1; this._currentNumber++)
-                        {
-                            this.AddDrawingData();
-                        }
-                        this.GLC_Model.OpenGLDraw += new SharpGL.RenderEventHandler(this.GLC_Model_OpenGLDraw);
-                        this.lblFinished.Text = "Finished!";
-                    }
-                }
-                //判断是否为坐标，只绘画一个点的状态
-                else
-                {
-                    string var1 = Parameter.Substring(1, Parameter.Length - 2);
-                    bool result = true;
-                    foreach (var item in var1.Split(','))
-                    {
-                        result = this.IsNumber(item);
-                        if (result == false)
-                        {
-                            MessageBox.Show("传入格式错误，请检查!");
-                            return;
-                        }
-                    }
-                    //坐标形式
-                    this._customPoint = Parameter;
-                    this._isFilePath = false;
-                    this.GLC_Model.OpenGLDraw += new SharpGL.RenderEventHandler(this.GLC_Model_OpenGLDraw);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// 判断是否为绝对值
-        /// </summary>
-        /// <param name="Value">G代码</param>
-        /// <returns></returns>
-        private bool IsAbs(string Value)
-        {
-            return Value.Contains("G90") ? true : false;
         }
 
         /// <summary>
@@ -699,6 +684,40 @@ namespace UC_SharpGLSimulate
             floatvar = float.Parse(var2.ToString());
             return floatvar;
         }
+        
+        /// <summary>
+        /// 重新加载时,还原全局变量
+        /// </summary>
+        private void Reload()
+        {
+            this._currentNumber = 0;
+            this._trackPointList.Clear();
+            this._point = new Point();
+            this._isAbs = true;
+            this._isFullLine = true;
+            this._customPoint = string.Empty;
+        }
+
+        /// <summary>
+        /// 计算两个坐标点的距离
+        /// </summary>
+        /// <param name="p1">坐标p1</param>
+        /// <param name="p2">坐标p2</param>
+        /// <returns></returns>
+        private double GetDistance(Point p1, Point p2)
+        {
+            return Math.Sqrt((p1.X - p2.X) * (p1.X - p2.X) + (p1.Y - p2.Y) * (p1.Y - p2.Y) + (p1.Z - p2.Z) * (p1.Z - p2.Z));
+        }
+
+        /// <summary>
+        /// 判断是否为绝对值
+        /// </summary>
+        /// <param name="Value">G代码</param>
+        /// <returns></returns>
+        private bool IsAbs(string Value)
+        {
+            return Value.Contains("G90") ? true : false;
+        }
 
         /// <summary>
         /// 判断某一个字符串是否为数字类型
@@ -718,5 +737,6 @@ namespace UC_SharpGLSimulate
             }
         }
 
+        #endregion
     }
 }
